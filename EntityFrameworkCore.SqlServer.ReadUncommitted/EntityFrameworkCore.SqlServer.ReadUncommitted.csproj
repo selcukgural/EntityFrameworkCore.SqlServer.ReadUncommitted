@@ -5,7 +5,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>WithNoLock</Title>
     <Authors>Selçuk Güral</Authors>
-    <PackageTags>EntityFramework; EntityFrameworkCore; NOLOCK; Transaction; ReadUncommitted;</PackageTags>
+    <PackageTags>EntityFramework; EntityFrameworkCore; NOLOCK; Transaction; ReadUncommitted;SqlServer</PackageTags>
     <Description>This package provides a set of `IQueryable&lt;T&gt;` extension methods to easily execute Entity Framework Core queries at the `ReadUncommitted` (`NOLOCK`) isolation level. It is designed to improve performance in high-traffic applications by reducing blocking and wait times during database read operations.</Description>
     <RepositoryType>git</RepositoryType>
     <Copyright>Selçuk Güral</Copyright>
@@ -16,10 +16,14 @@
     <RootNamespace>EntityFrameworkCore.SqlServer.ReadUncommitted</RootNamespace>
     <AssemblyVersion>1.0.0</AssemblyVersion>
     <PackageIcon>Icon.png</PackageIcon>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="Icon.png" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="LICENSE.txt" Pack="true" PackagePath="" />
     
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.8" />
