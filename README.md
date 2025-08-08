@@ -1,27 +1,55 @@
 # EntityFramework.WithNoLock
 
-This project provides extension methods for executing Entity Framework Core queries at the `NOLOCK` (ReadUncommitted) isolation level. The goal is to prevent read operations from being affected by database locks, especially in high-concurrency scenarios.
+Small helper extensions to execute EF Core queries using the ReadUncommitted isolation level (commonly known as NOLOCK in SQL Server) to reduce blocking for read-heavy, high-concurrency scenarios.
 
-## Purpose
+Important: This library does NOT attempt to rewrite SQL or inject table hints. It uses a short-lived transaction with IsolationLevel.ReadUncommitted, letting the provider handle semantics.
 
-The main purpose is to prevent read queries made via EF Core from waiting due to locks created by other database operations. By using the `ReadUncommitted` isolation level, a query is allowed to read data that has been modified by other uncommitted transactions. This is known as a "dirty read," but it can significantly improve read performance and reduce the risk of deadlocks.
+## Install
+
+```bash
+dotnet add package EntityFramework.WithNoLock
+```
 
 ## Usage
 
-To use these extension methods, simply include the `EfCoreExtensions.cs` file in your project and add the `using EntityFramework.WithNoLock;` directive.
-
-The methods extend the `IQueryable<T>` interface and are used with your existing `DbContext` instance.
-
 ```csharp
 using EntityFramework.WithNoLock;
-using Microsoft.EntityFrameworkCore;
 
-// ...
+// ToList
+var users = await dbContext.Users
+    .ToListWithNoLockAsync(dbContext, cancellationToken: ct);
 
-var productList = await _context.Products
-    .Where(p => p.IsActive)
-    .ToListWithNoLockAsync(_context);
+// FirstOrDefault with optional filter
+var user = await dbContext.Users
+    .FirstOrDefaultWithNoLockAsync(dbContext, u => u.Id == id, ct);
+
+// Count
+var count = await dbContext.Users
+    .CountWithNoLockAsync(dbContext, cancellationToken: ct);
+
+// ToDictionary (key only)
+var byId = await dbContext.Users
+    .ToDictionaryWithNoLockAsync(dbContext, u => u.Id, ct);
+
+// ToDictionary (key + value + comparer)
+var map = await dbContext.Users
+    .ToDictionaryWithNoLockAsync(dbContext, u => u.Id, u => u.Email, StringComparer.OrdinalIgnoreCase, ct);
 ```
+
+### Ambient transaction behavior
+If there is an existing transaction (DbContext.Database.CurrentTransaction or an ambient System.Transactions.Transaction), the library will NOT try to override its isolation level. In that case, queries execute under the existing transaction's isolation.
+
+### Provider notes
+- Optimized for SQL Server. On some providers (e.g., PostgreSQL), ReadUncommitted may behave as ReadCommitted; consult your provider's documentation.
+- Only use for read operations. These helpers never alter writes.
+
+### Risks of NOLOCK / ReadUncommitted
+- Dirty reads (uncommitted data)
+- Non-repeatable reads
+- Phantom reads
+- Missing or duplicated rows in edge cases
+
+Use sparingly and only where you can tolerate these anomalies.
 
 ## Available Methods
 
@@ -95,7 +123,7 @@ public class ProductRepository
     }
 
     // Gets the first product with the specified ID
-    public async Task<Product> GetProductByIdAsync(int id)
+    public async Task<Product?> GetProductByIdAsync(int id)
     {
         // Usage of FirstOrDefaultWithNoLockAsync
         return await _context.Products
@@ -120,3 +148,19 @@ public class ProductRepository
     }
 }
 ```
+
+## CI and Releases
+Publishing to NuGet is automated via GitHub Actions on tags matching `v*.*.*`.
+
+Steps:
+1. Create a NuGet API key and add it to the repository secrets as `NUGET_API_KEY`.
+2. Bump the version in the .csproj.
+3. Tag and push:
+   ```bash
+   git tag v1.0.0
+   git push --tags
+   ```
+The workflow will pack and push the package to NuGet (skipping duplicates).
+
+## License
+The package uses the repository's existing LICENSE file. See the root LICENSE for details.
